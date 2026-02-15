@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Encrypted Discord Chat</title>
+<style>
+body {
+    font-family: monospace;
+    background: #111;
+    color: #eee;
+    padding: 20px;
+}
+#chat {
+    border: 1px solid #444;
+    padding: 10px;
+    height: 400px;
+    overflow-y: scroll;
+    margin-bottom: 10px;
+    background: #000;
+}
+input, button {
+    padding: 5px;
+    font-family: monospace;
+}
+</style>
+</head>
+<body>
+
+<h2>Encrypted Discord Chat</h2>
+
+<div id="login">
+    <input id="room" placeholder="Room name">
+    <input id="username" placeholder="Username">
+    <input id="password" placeholder="Password (if private)">
+    <button onclick="joinRoom()">Join Room</button>
+</div>
+
+<div id="chatUI" style="display:none;">
+    <div id="chat"></div>
+    <input id="message" placeholder="Type message" onkeydown="if(event.key==='Enter') sendMessage()">
+    <button onclick="sendMessage()">Send</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/fernet@0.0.3/dist/fernet.min.js"></script>
+<script>
+let roomName, username, roomKey, webhookUrl;
+let pollInterval;
+
+function safePrint(msg) {
+    const chat = document.getElementById("chat");
+    chat.innerHTML += msg + "<br>";
+    chat.scrollTop = chat.scrollHeight;
+}
+
+async function joinRoom() {
+    roomName = document.getElementById("room").value.trim();
+    username = document.getElementById("username").value.trim();
+    const password = document.getElementById("password").value;
+
+    if(!roomName || !username) { alert("Room & username required"); return; }
+
+    const res = await fetch("https://YOUR_BACKEND_URL/join_room", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({room_name: roomName, username, password})
+    });
+    const data = await res.json();
+    if(data.error) { alert(data.error); return; }
+
+    roomKey = data.key;
+    webhookUrl = data.webhook_url;
+
+    document.getElementById("login").style.display = "none";
+    document.getElementById("chatUI").style.display = "block";
+
+    safePrint("Joined room: " + roomName);
+    startPolling();
+}
+
+// Fernet helper
+function encryptMessage(key, msg) {
+    const f = new fernet.Secret(key);
+    const token = new fernet.Token({secret: f, time:0});
+    return token.encode(msg);
+}
+
+function decryptMessage(key, tokenStr) {
+    try {
+        const f = new fernet.Secret(key);
+        const token = new fernet.Token({secret: f, token: tokenStr, ttl:0});
+        return token.decode();
+    } catch(e) {
+        return "[Unable to decrypt]";
+    }
+}
+
+async function sendMessage() {
+    const input = document.getElementById("message");
+    const msg = input.value.trim();
+    if(!msg) return;
+    input.value = "";
+
+    const encrypted = encryptMessage(roomKey, msg);
+
+    await fetch("https://YOUR_BACKEND_URL/send_message", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({room_name: roomName, username, message: encrypted})
+    });
+}
+
+// -------- Polling messages --------
+let lastMessageIds = new Set();
+async function pollMessages() {
+    const res = await fetch(`https://YOUR_BACKEND_URL/get_messages?room_name=${roomName}`);
+    const data = await res.json();
+    if(data.error) return;
+    for(const msg of data.messages) {
+        if(lastMessageIds.has(msg.id)) continue;
+        lastMessageIds.add(msg.id);
+        const text = decryptMessage(roomKey, msg.content);
+        safePrint(`[${new Date(msg.timestamp).toLocaleTimeString()}] ${msg.user}: ${text}`);
+    }
+}
+
+function startPolling() {
+    pollInterval = setInterval(pollMessages, 2000);
+}
+</script>
+</body>
+</html>
