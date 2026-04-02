@@ -1,2 +1,288 @@
-yoink!
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Yoink — grab anything.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg:      #0a0a0a;
+    --surface: #111111;
+    --border:  #222222;
+    --accent:  #c8f135;
+    --muted:   #555555;
+    --text:    #f0f0f0;
+    --mono:    'Space Mono', monospace;
+    --sans:    'Syne', sans-serif;
+  }
+  html { scroll-behavior: smooth; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); overflow-x: hidden; cursor: none; }
 
+  .cursor {
+    position: fixed; width: 10px; height: 10px;
+    background: var(--accent); border-radius: 50%;
+    pointer-events: none; z-index: 9999;
+    transform: translate(-50%, -50%);
+    transition: width .15s, height .15s;
+    mix-blend-mode: difference;
+  }
+  .cursor.grow { width: 32px; height: 32px; }
+
+  body::before {
+    content: ''; position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 0; opacity: .35;
+  }
+
+  nav {
+    position: fixed; top: 0; left: 0; right: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1.25rem 2.5rem;
+    border-bottom: 1px solid var(--border);
+    background: rgba(10,10,10,.88);
+    backdrop-filter: blur(14px);
+    z-index: 100;
+  }
+  .nav-logo { font-family: var(--mono); font-size: .85rem; color: var(--accent); letter-spacing: .1em; text-decoration: none; }
+  .nav-links { display: flex; gap: 2rem; }
+  .nav-links a { font-family: var(--mono); font-size: .75rem; color: var(--muted); text-decoration: none; letter-spacing: .08em; text-transform: uppercase; transition: color .2s; }
+  .nav-links a:hover { color: var(--text); }
+
+  .hero {
+    min-height: 100vh; display: flex; flex-direction: column;
+    justify-content: flex-end; padding: 0 2.5rem 5rem;
+    position: relative; overflow: hidden;
+  }
+  .hero-bg-ascii {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: var(--mono); font-size: clamp(5px, .85vw, 10px);
+    line-height: 1.25; color: var(--accent); opacity: .06;
+    white-space: pre; pointer-events: none; user-select: none;
+  }
+  .hero-eyebrow {
+    font-family: var(--mono); font-size: .75rem; color: var(--accent);
+    letter-spacing: .2em; text-transform: uppercase; margin-bottom: 1.5rem;
+    opacity: 0; animation: fadeup .6s .2s forwards;
+  }
+  .hero-title {
+    font-family: var(--sans); font-size: clamp(3.5rem, 10vw, 9rem);
+    font-weight: 800; line-height: .95; letter-spacing: -.03em;
+    margin-bottom: 2rem; opacity: 0; animation: fadeup .7s .35s forwards;
+  }
+  .hero-title span { color: var(--accent); }
+  .hero-sub {
+    font-family: var(--mono); font-size: clamp(.8rem, 1.3vw, .95rem);
+    color: var(--muted); max-width: 460px; line-height: 1.8;
+    margin-bottom: 3rem; opacity: 0; animation: fadeup .7s .5s forwards;
+  }
+  .hero-actions { display: flex; gap: 1rem; flex-wrap: wrap; opacity: 0; animation: fadeup .7s .65s forwards; }
+
+  .btn {
+    font-family: var(--mono); font-size: .8rem; letter-spacing: .08em;
+    text-transform: uppercase; text-decoration: none;
+    padding: .85rem 2rem; border: 1px solid;
+    transition: background .2s, color .2s, transform .15s; display: inline-block;
+  }
+  .btn:active { transform: scale(.97); }
+  .btn-primary { background: var(--accent); color: #0a0a0a; border-color: var(--accent); }
+  .btn-primary:hover { background: #d4f74a; border-color: #d4f74a; }
+  .btn-ghost { background: transparent; color: var(--text); border-color: var(--border); }
+  .btn-ghost:hover { border-color: var(--muted); }
+
+  .hero-scroll {
+    position: absolute; bottom: 2rem; right: 2.5rem;
+    font-family: var(--mono); font-size: .65rem; color: var(--muted);
+    letter-spacing: .15em; text-transform: uppercase; writing-mode: vertical-rl;
+    opacity: 0; animation: fadeup .7s .9s forwards;
+  }
+
+  .demo { padding: 8rem 2.5rem; max-width: 860px; margin: 0 auto; }
+  .demo-label { font-family: var(--mono); font-size: .7rem; color: var(--accent); letter-spacing: .2em; text-transform: uppercase; margin-bottom: 1.5rem; }
+  .terminal { background: var(--surface); border: 1px solid var(--border); padding: 1.75rem 2rem; font-family: var(--mono); font-size: .85rem; line-height: 2.1; }
+  .terminal-bar { display: flex; gap: .5rem; margin-bottom: 1.5rem; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .dot-r { background: #ff5f56; } .dot-y { background: #ffbd2e; } .dot-g { background: #27c93f; }
+  .prompt { color: var(--accent); }
+  .cmd    { color: var(--text); }
+  .out    { color: #555; }
+  .ok     { color: var(--accent); }
+
+  .features { padding: 6rem 2.5rem; border-top: 1px solid var(--border); }
+  .section-label { font-family: var(--mono); font-size: .7rem; color: var(--accent); letter-spacing: .2em; text-transform: uppercase; text-align: center; }
+  .features-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1px; background: var(--border); border: 1px solid var(--border);
+    max-width: 1100px; margin: 4rem auto 0;
+  }
+  .feature { background: var(--bg); padding: 2.5rem 2rem; transition: background .2s; }
+  .feature:hover { background: var(--surface); }
+  .feature-num { font-family: var(--mono); font-size: .65rem; color: var(--accent); letter-spacing: .2em; margin-bottom: 1.5rem; }
+  .feature-title { font-size: 1.1rem; font-weight: 700; margin-bottom: .75rem; }
+  .feature-desc { font-family: var(--mono); font-size: .75rem; color: var(--muted); line-height: 1.9; }
+
+  .install { padding: 8rem 2.5rem; text-align: center; border-top: 1px solid var(--border); }
+  .install-title { font-size: clamp(2rem, 5vw, 4rem); font-weight: 800; letter-spacing: -.02em; margin: 1.5rem 0 1rem; }
+  .install-sub { font-family: var(--mono); font-size: .8rem; color: var(--muted); margin-bottom: 3rem; }
+  .install-cmd {
+    display: inline-flex; align-items: center; gap: 1rem;
+    background: var(--surface); border: 1px solid var(--border);
+    padding: 1rem 1.5rem; font-family: var(--mono); font-size: .9rem; margin-bottom: 2.5rem;
+  }
+  .install-cmd span { color: var(--accent); }
+  .copy-btn {
+    background: none; border: 1px solid var(--border); color: var(--muted);
+    font-family: var(--mono); font-size: .7rem; padding: .35rem .75rem;
+    cursor: none; transition: color .2s, border-color .2s; letter-spacing: .05em;
+  }
+  .copy-btn:hover { color: var(--text); border-color: var(--muted); }
+
+  footer {
+    border-top: 1px solid var(--border); padding: 2rem 2.5rem;
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;
+  }
+  footer span { font-family: var(--mono); font-size: .7rem; color: var(--muted); }
+  footer a { font-family: var(--mono); font-size: .7rem; color: var(--muted); text-decoration: none; transition: color .2s; }
+  footer a:hover { color: var(--text); }
+  .footer-links { display: flex; gap: 1.5rem; }
+
+  @keyframes fadeup { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); }
+</style>
+</head>
+<body>
+
+<div class="cursor" id="cursor"></div>
+
+<nav>
+  <a class="nav-logo" href="/">yoink_</a>
+  <div class="nav-links">
+    <a href="#features">features</a>
+    <a href="docs/index.html">docs</a>
+    <a href="https://github.com/yourname/yoink">github</a>
+  </div>
+</nav>
+
+<section class="hero">
+  <pre class="hero-bg-ascii">   :::   :::  :::::::: ::::::::::: ::::    ::: :::    :::
+  :+:   :+: :+:    :+:    :+:     :+:+:   :+: :+:   :+:
+  +:+ +:+  +:+    +:+    +:+     :+:+:+  +:+ +:+  +:+
+  +#++:   +#+    +:+    +#+     +#+ +:+ +#+ +#++:++
+  +#+    +#+    +#+    +#+     +#+  +#+#+# +#+  +#+
+ #+#    #+#    #+#    #+#     #+#   #+#+# #+#   #+#
+###     ######## ########### ###    #### ###    ###
+   :::   :::  :::::::: ::::::::::: ::::    ::: :::    :::
+  :+:   :+: :+:    :+:    :+:     :+:+:   :+: :+:   :+:
+  +:+ +:+  +:+    +:+    +:+     :+:+:+  +:+ +:+  +:+
+  +#++:   +#+    +:+    +#+     +#+ +:+ +#+ +#++:++
+  +#+    +#+    +#+    +#+     +#+  +#+#+# +#+  +#+
+ #+#    #+#    #+#    #+#     #+#   #+#+# #+#   #+#
+###     ######## ########### ###    #### ###    ###</pre>
+
+  <p class="hero-eyebrow">v1.0.0 — windows</p>
+  <h1 class="hero-title">grab<br>anything.<span>_</span></h1>
+  <p class="hero-sub">no ads. no browser. no bullshit.<br>paste a url. get the file. done.</p>
+  <div class="hero-actions">
+    <a class="btn btn-primary" href="https://github.com/yourname/yoink/releases">download</a>
+    <a class="btn btn-ghost" href="docs/index.html">read the docs</a>
+  </div>
+  <span class="hero-scroll">scroll</span>
+</section>
+
+<section class="demo">
+  <p class="demo-label">// it really is this simple</p>
+  <div class="terminal">
+    <div class="terminal-bar">
+      <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+    </div>
+    <div><span class="prompt">$ </span><span class="cmd">yoink https://youtube.com/watch?v=xxxxxx</span></div>
+    <div><span class="out">[>] Downloading MP4 to: C:\Users\you\Downloads</span></div>
+    <div><span class="out">[>] 100% ████████████████ 42.3MB</span></div>
+    <div><span class="ok">[+] Done! Saved to: C:\Users\you\Downloads</span></div>
+    <div>&nbsp;</div>
+    <div><span class="prompt">$ </span><span class="cmd">yoink https://open.spotify.com/track/xxxxxx --flac</span></div>
+    <div><span class="out">[>] Downloading FLAC to: C:\Users\you\Music</span></div>
+    <div><span class="ok">[+] Done! Saved to: C:\Users\you\Music</span></div>
+    <div>&nbsp;</div>
+    <div><span class="prompt">$ </span><span class="cmd">yoink https://www.tiktok.com/@user/video/xxxxxx</span></div>
+    <div><span class="ok">[+] Done! Saved to: C:\Users\you\Downloads</span></div>
+  </div>
+</section>
+
+<section class="features" id="features">
+  <p class="section-label">// what it does</p>
+  <div class="features-grid">
+    <div class="feature">
+      <p class="feature-num">01</p>
+      <h3 class="feature-title">YouTube, Spotify & more</h3>
+      <p class="feature-desc">yt-dlp under the hood means 1000+ sites work out of the box. TikTok, Instagram, Twitter, Vimeo, SoundCloud — if yt-dlp supports it, yoink does too.</p>
+    </div>
+    <div class="feature">
+      <p class="feature-num">02</p>
+      <h3 class="feature-title">MP4, MP3 or FLAC</h3>
+      <p class="feature-desc">best quality video by default. --audio for MP3 at 192kbps. --flac for lossless. yoink figures out the rest.</p>
+    </div>
+    <div class="feature">
+      <p class="feature-num">03</p>
+      <h3 class="feature-title">no ads. ever.</h3>
+      <p class="feature-desc">completely open source. no sketchy websites with 4 popups. no installers that bundle toolbars. just a command that works.</p>
+    </div>
+    <div class="feature">
+      <p class="feature-num">04</p>
+      <h3 class="feature-title">works everywhere</h3>
+      <p class="feature-desc">installer puts yoink on your PATH. open any terminal — cmd, powershell, windows terminal — and just type yoink.</p>
+    </div>
+    <div class="feature">
+      <p class="feature-num">05</p>
+      <h3 class="feature-title">smart defaults</h3>
+      <p class="feature-desc">set a default folder once, never get asked again. spotify and audio downloads auto-route to ~/Music. playlists ask before you download 200 videos.</p>
+    </div>
+    <div class="feature">
+      <p class="feature-num">06</p>
+      <h3 class="feature-title">--pick flag</h3>
+      <p class="feature-desc">not sure yoink found the right version? --pick shows top 5 YouTube results with durations so you choose exactly what you want.</p>
+    </div>
+  </div>
+</section>
+
+<section class="install">
+  <p class="section-label">// get it</p>
+  <h2 class="install-title">one command.<br>that's it.</h2>
+  <p class="install-sub">windows 10/11 &nbsp;·&nbsp; python 3.8+ required</p>
+  <div>
+    <div class="install-cmd">
+      <span>yoink</span> &lt;url&gt;
+      <button class="copy-btn" onclick="navigator.clipboard.writeText('yoink <url>');this.textContent='copied!';setTimeout(()=>this.textContent='copy',1500)">copy</button>
+    </div>
+  </div>
+  <br><br>
+  <a class="btn btn-primary" href="https://github.com/hevji/yoink/releases">download latest release</a>
+</section>
+
+<footer>
+  <span>yoink v1.0.0 &nbsp;—&nbsp; MIT license</span>
+  <div class="footer-links">
+    <a href="docs/index.html">docs</a>
+    <a href="https://github.com/hevji/yoink">github</a>
+    <a href="docs/noxxx.txt">no xxx policy</a>
+  </div>
+</footer>
+
+<script>
+  const cursor = document.getElementById('cursor');
+  document.addEventListener('mousemove', e => {
+    cursor.style.left = e.clientX + 'px';
+    cursor.style.top  = e.clientY + 'px';
+  });
+  document.querySelectorAll('a, button, .feature').forEach(el => {
+    el.addEventListener('mouseenter', () => cursor.classList.add('grow'));
+    el.addEventListener('mouseleave', () => cursor.classList.remove('grow'));
+  });
+</script>
+</body>
+</html>
