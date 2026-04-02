@@ -1,0 +1,9 @@
+Requirements
+
+Required:
+- Python 3.10+
+- ffmpeg (in PATH)
+- yt-dlp
+
+Optional:
+- Spotify cookies for higher success rate

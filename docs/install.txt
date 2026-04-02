@@ -1,0 +1,10 @@
+Yoink Installation Guide (Windows)
+
+1. Install Python 3.10+
+2. Install ffmpeg and add it to PATH
+3. Install yt-dlp:
+   pip install yt-dlp
+4. Download Yoink and run it
+
+Verify install:
+   yoink --version

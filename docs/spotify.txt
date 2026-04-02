@@ -1,0 +1,12 @@
+Spotify Usage
+
+Yoink supports:
+- Tracks
+- Albums
+- Playlists
+
+Example:
+   yoink https://open.spotify.com/track/...
+
+Note:
+Spotify downloads rely on external sources.

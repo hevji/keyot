@@ -1,0 +1,10 @@
+FAQ
+
+Q: Why is download slow?
+A: Depends on source and connection.
+
+Q: Why no audio?
+A: Try --audio flag.
+
+Q: ffmpeg not found?
+A: Add ffmpeg to PATH.

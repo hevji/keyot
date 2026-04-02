@@ -1,0 +1,12 @@
+Supported Sites
+
+Yoink uses yt-dlp backend.
+
+This includes:
+- YouTube
+- SoundCloud
+- Vimeo
+- Many more
+
+Full list:
+https://github.com/yt-dlp/yt-dlp

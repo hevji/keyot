@@ -1,0 +1,10 @@
+Folder Configuration
+
+Default folder:
+   ./downloads
+
+Change folder:
+   yoink --folder C:\Music
+
+Reset config:
+   yoink --reset

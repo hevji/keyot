@@ -1,0 +1,8 @@
+Errors
+
+"ffmpeg not found"
+
+"yt-dlp failed"
+   pip install -U yt-dlp
+
+"unsupported URL"

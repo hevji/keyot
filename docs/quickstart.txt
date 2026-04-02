@@ -1,0 +1,13 @@
+Yoink Quickstart
+
+Basic usage:
+   yoink [URL]
+
+Examples:
+   yoink https://youtube.com/...
+   yoink --audio https://soundcloud.com/...
+
+Common flags:
+   --audio   Download audio only
+   --flac    Convert to FLAC
+   --folder  Set output folder

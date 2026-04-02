@@ -1,0 +1,8 @@
+Flags Reference
+
+--audio      Download audio only
+--flac       Convert output to FLAC
+--pick       Select specific items
+--folder     Set output directory
+--reset      Reset config
+--version    Show version
